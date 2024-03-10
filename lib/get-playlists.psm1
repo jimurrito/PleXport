@@ -1,31 +1,50 @@
 <#
 .Description
-Gets playlists from plex
+Functions to connect to Plex and get playlists.
 #>
+
+
+function Test-PlexConnection {
+    param (
+        $ServerSock,
+        $Token
+    )
+    [xml]((Invoke-WebRequest "http://${ServerSock}/?X-Plex-Token=${token}").content)
+}
+
+function Find-PlexFriendlyname {
+    param (
+        [Parameter(ValueFromPipeline = $true)]$xml
+    )
+    $xml.MediaContainer.FriendlyName
+}
+
+
 
 function Get-PlexPlaylist {
     param (
-        $Server,
+        $ServerSock,
         $Token
     )
-    [xml]((Invoke-WebRequest "http://${server}:32400/playlists/?X-Plex-Token=${token}").content)
+    [xml]((Invoke-WebRequest "http://${ServerSock}/playlists/?X-Plex-Token=${token}").content)
 }
 
 function Find-Playlists {
     param (
         [Parameter(ValueFromPipeline = $true)]$xml
     )
-    $xml.MediaContainer.Playlist
+    $xml.MediaContainer.Playlist | Where-Object { $_.playlistType -eq "audio" }
 }
+
 
 
 function Get-PlexPlaylistItems {
     param (
-        $Server,
+        $ServerSock,
         $Token,
         $Playlist
     )
-    [xml]((Invoke-WebRequest "http://${server}:32400/playlists/${Playlist}/items?X-Plex-Token=${token}").content)
+    [xml]((Invoke-WebRequest "http://${ServerSock}/playlists/${Playlist}/items?X-Plex-Token=${token}").content)
 }
 
 function Find-PlaylistTracks {
@@ -46,5 +65,5 @@ function Set-TrackDataPaths {
     param (
         [Parameter(ValueFromPipeline = $true)]$Paths
     )
-    foreach ($Path in $Paths) {$Path -replace "/data/Music","/music"}    
+    foreach ($Path in $Paths) { $Path -replace "/data/Music", "/music" }    
 }
