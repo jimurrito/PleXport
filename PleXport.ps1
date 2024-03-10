@@ -5,39 +5,44 @@ Script to allow exporting playlists from plex, for import into another app.
 
 # Parameters
 param (
-    $Server,
+    $Server = "127.0.0.1",
     $Port = 32400,
     $TokenFile = ".\token",
-    $Token 
+    $Token,
+    $Path
 )
 
 # 
-Import-Module -Name "$PSScriptRoot\lib\*.psm1"
+Import-Module -Name "$PSScriptRoot\lib\get-playlists.psm1"
+Import-Module -Name "$PSScriptRoot\lib\validate.psm1"
+
 
 # Start timer
 $timer = [Diagnostics.Stopwatch]::StartNew()
 
-# Set Token
-if ($null -eq $Token) {
-    $Token = Get-Content $TokenFile -ErrorAction SilentlyContinue
-}
 
-# Input validation
-if ($null -eq $Server) {
-    Write-Error "Script requires the '-Server' Parameter containing the IP address of the Server."
+# Set/Check Token Input
+try {
+    $Token = Set-Token $Token $TokenFile
+}
+catch {
+    Write-Error "Script requires a token to connect to Plex. Either use the '-Token' or '-TokenFile' parameters."
     exit
 }
-elseif ($null -eq $Token) {
-    Write-Error "Script requires a token to connect to Plex. Either use the '-Token' or '-TokenFile' parameters"
-    exit
+finally {
+    Write-Host ("Connecting to Server @{0}:{1}" -f $Server, $Port)
 }
 
-#
-Write-Host ("Connecting to Server @{0}:{1}" -f $Server, $Port)
 
 # Get playlist
-$Playlists = Get-PlexPlaylist -Server 10.2.3.10 -Token $Token | Find-Playlists
-Write-Host ("[{0}] playlist(s) found." -f $Playlists.Count)
+try {
+    $Playlists = Get-PlexPlaylist -Server $Server -Token $Token -ErrorAction SilentlyContinue | Find-Playlists
+    Write-Host ("[{0}] playlist(s) found." -f $Playlists.Count)
+}
+catch {
+    Write-Error ("Failed to connect to Plex Server @{0}:{1}. Please check network connectivity to the server." -f $Server, $Port)
+    exit
+}
 
 # make dir for playlists
 $null = New-Item -Name playlists -ItemType Directory -ErrorAction SilentlyContinue
